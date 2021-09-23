@@ -151,6 +151,30 @@ $ source /etc/profile
 $ java -version
 ```
 
+#### git
+
+> 安装
+
+``` shell
+$ yum install git
+$ git --verion
+```
+
+> 配置
+
+``` shell
+$ git config --global user.name "hudong"
+$ git config --global user.email hudong.tech@gmail.com
+$ git config --list
+```
+
+``` shell
+$ ssh-keygen -t rsa -C "hudong.tech@gmail.com"
+$ cat ~/.ssh/id_rsa.pub
+```
+
+
+
 #### Docker
 
 > [官方安装文档](https://docs.docker.com/engine/install/centos/)
@@ -219,8 +243,8 @@ sudo docker start mysql
 sudo docker exec -it mysql /bin/bash
 # 查看当前容器挂载目录
 $ docker inspect mysql |grep Mounts -A 20
-# 挂载目录
-
+# 查看运行日志
+$ docker logs -f mysql
 ```
 
 > 如何进入容器
@@ -295,6 +319,22 @@ $ docker logs -f redis
 $ docker exec -it redis /bin/bash
 @redis $ redis-cli
 ```
+
+##### 故障处理
+
+> 报错：WARNING **overcommit_memory is set to 0**! Background save may fail under low memory condition. To fix this issue add ‘vm.overcommit_memory = 1’ to /etc/sysctl.conf and then reboot or run the command ‘sysctl vm.overcommit_memory=1’ for this to take effect.
+
+解决方案：
+
+``` shell 
+$ vi /etc/sysctl.conf
+# 尾部添加
+vm.overcommit_memory=1
+# 重新启动或运行下面命令
+$ sysctl vm.overcommit_memory=1
+```
+
+
 
 #### ELK
 
