@@ -1,5 +1,11 @@
 # linux搭建环境
 
+### 查看可用内存
+
+``` shell
+free -m
+```
+
 ### 配置网络
 
 **将网络设置为192.168.100.66**
@@ -22,7 +28,13 @@ VMware的设置(1-5必填)
 
 hudong_M虚拟机的设置：
 
-1. 编辑ip
+1. 当虚拟机无法联网时，下面命令可进行联网
+
+   ``` shell
+   $ dhclient -v
+   ```
+
+2. 编辑ip
 
 ``` shell
 $ cd /etc/sysconfig/network-scripts/
@@ -121,6 +133,8 @@ set encoding=utf-8
 set t_Co=256
 set autoindent
 set shiftwidth=4
+set tabstop=4
+
 ```
 
 ### 安装基础软件
@@ -243,6 +257,7 @@ sudo docker start mysql
 sudo docker exec -it mysql /bin/bash
 # 查看当前容器挂载目录
 $ docker inspect mysql |grep Mounts -A 20
+
 # 查看运行日志
 $ docker logs -f mysql
 ```
@@ -264,11 +279,15 @@ $ exit
 
 #### mysql
 
+> ⚠️云数据库一定要注意安全问题
+>
+> mysql 端口不要使用默认端口(其实开源的中间件最好都不要用默认端口)
+
 ``` shell
 1. 下载mysql
 # docker pull mysql:5.7
 2. 创建实例并启动
-$ sudo docker run -p 3306:3306 --name mysql \
+$ sudo docker run -p 3306:11306 --name mysql \
 -v /mydata/mysql/log:/var/log/mysql \
 -v /mydata/mysql/data:/var/lib/mysql \
 -v /mydata/mysql/conf:/etc/mysql \
@@ -281,6 +300,48 @@ $ docker ps
 
 ![image-20210123044734985](https://hp-documents.oss-cn-hangzhou.aliyuncs.com/2021/05/20210606033023.png)
 
+**my.cnf配置文件**
+
+``` shell
+# 查看my.cnf配置位置的读取顺序,如果/etc/my.cnf不存在，则我们需要在etc下创建my.cnf配置文件（mysql会优先度读取）。
+$ mysql --help | grep my.cnf 
+
+```
+
+
+
+### 创建超级用户
+
+> 数据库用户加权限 root 用户强烈只能 host 访问(感觉目前用 root 当用户的人 挺多的)
+
+
+
+##### 允许任意主机通过外网访问mysql
+
+1. 查看用户信息，确认root账号只允许本地登录。
+
+> 修改前：
+
+![image-20211115105628782](https://hp-documents.oss-cn-hangzhou.aliyuncs.com/2021/06/20211115105630.png)
+
+``` sql
+mysql> use mysql;
+mysql> update user set host = '%' where user ='root';
+mysql> select host, user from user;
+mysql> flush privileges;
+```
+
+> 修改后：
+
+![image-20211115105856520](https://hp-documents.oss-cn-hangzhou.aliyuncs.com/2021/06/20211115105857.png)
+
+2. 授权用户,你想root使用密码从任何主机连接到mysql服务器
+
+``` sql
+mysql> GRANT ALL PRIVILEGES ON *.* TO 'root'@'%'  IDENTIFIED BY 'root'  WITH GRANT OPTION;
+mysql> flush privileges;
+```
+
 #### redis
 
 > [redis官网](http://www.redis.cn/download.html)
@@ -290,16 +351,17 @@ $ docker ps
 ![1](https://hp-documents.oss-cn-hangzhou.aliyuncs.com/2021/09/1.png)
 
 > bind 127.0.0.1 #注释掉这部分，使redis可以外部访问
-> daemonize no#用守护线程的方式启动
+>
+> protected-mode no
+>
+> daemonize yes#用守护线程的方式启动
 > requirepass 你的密码#给redis设置密码
 > appendonly yes#redis持久化　　默认是no
 > tcp-keepalive 300 #防止出现远程主机强迫关闭了一个现有的连接的错误 默认是300
->
-> logfile "./log/redis.log"
 
 ``` shell
 $ docker pull redis
-$ sudo docker run -p 6379:6379 --name redis -v /data/redis/conf/redis.conf:/etc/redis/redis.conf  -v /data/redis/data:/data -d redis redis-server /etc/redis/redis.conf --appendonly yes
+$ sudo docker run -p 6379:6379 --name redis -v /mydata/redis/conf/redis.conf:/etc/redis/redis.conf  -v /data/redis/data:/data -d redis redis-server /etc/redis/redis.conf
 ```
 
 参数解释：
@@ -334,7 +396,44 @@ vm.overcommit_memory=1
 $ sysctl vm.overcommit_memory=1
 ```
 
+> WARNING: The TCP backlog setting of 511 cannot be enforced because /proc/sys/net/core/somaxconn is set to the lower value of 128.
 
+![image-20210926011354908](https://hp-documents.oss-cn-hangzhou.aliyuncs.com/2021/09/image-20210926011354908.png)
+
+``` shell
+$ vi /etc/sysctl.conf
+net.core.somaxconn= 1024
+# 运行下面命令
+$ sysctl -p
+```
+
+#### nginx
+
+``` shell
+docker pull nginx:1.10
+# 随便启动一个nginx实例，只是为了复制出配置，放到docker里作为镜像的统一配置
+docker run -p 80:80 --name nginx -d nginx:1.10
+
+cd /mydata/nginx
+docker container cp nginx:/etc/nginx .
+然后在外部 /mydata/nginx/nginx 有了一堆文件
+mv /mydata/nginx/nginx /mydata/nginx/conf
+# 停掉nginx
+docker stop nginx
+docker rm nginx
+
+# 创建新的nginx
+docker run -p 80:80 --name nginx \
+-v /mydata/nginx/html:/usr/share/nginx/html \
+-v /mydata/nginx/logs:/var/log/nginx \
+-v /mydata/nginx/conf:/etc/nginx \
+-d nginx:1.10
+
+# 注意一下这个路径映射到了/usr/share/nginx/html，我们在nginx配置文件中是写/usr/share/nginx/html，不是写/mydata/nginx/html
+
+docker update nginx --restart=always
+
+```
 
 #### ELK
 
@@ -343,5 +442,13 @@ $ sysctl vm.overcommit_memory=1
 ``` shell
 $ docker pull elasticsearch:7.4.2
 $ docker pull kibana:7.4.2
+```
+
+### nacos
+
+> 安装在/opt/nacos中
+
+``` shell
+$ sh startup.sh -m standalone
 ```
 
