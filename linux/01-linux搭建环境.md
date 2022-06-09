@@ -435,6 +435,33 @@ docker update nginx --restart=always
 
 ```
 
+#### RabbitMQ
+
+> [rabbitMQ官方文档](https://www.rabbitmq.com/documentation.html)
+>
+> [rabbitMQ官方文档网络配置](https://www.rabbitmq.com/networking.html)
+>
+> [docker rabbitMQ仓库](https://hub.docker.com/_/rabbitmq)
+
+``` shell
+# 4369、25672：Erlang发现和集群端口
+# 5672、5671：AMQP高级消息队列协议端口
+# 15672：web后台端口
+# 61613/61614：STOMP协议端口
+# 安装之后直接访问http端口 15672。
+$ docker run -d --name rabbitmq -p 5671:5671 -p 5672:5672 -p 4369:4369 -p 25672:25672 -p 15671:15671 -p 15672:15672 rabbitmq:management
+
+$ docker update rabbitmq --restart=always
+```
+
+访问 服务器地址:15672 即出现rabbitMQ的登录界面
+
+![](https://hp-documents.oss-cn-hangzhou.aliyuncs.com/2021/11/20220610023736.png)
+
+初始用户名和密码都是guest. 登录后即可看到RabbitMQ的管理界面。
+
+![](https://hp-documents.oss-cn-hangzhou.aliyuncs.com/2021/11/20220610023842.png)
+
 #### ELK
 
 > ELK版本要一致
@@ -451,4 +478,3 @@ $ docker pull kibana:7.4.2
 ``` shell
 $ sh startup.sh -m standalone
 ```
-
