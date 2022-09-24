@@ -346,7 +346,7 @@ mysql> flush privileges;
 
 > [redis官网](http://www.redis.cn/download.html)
 >
-> 准备redis配置文件。下载一个redis，解压后，将其中的`redis.conf`上传到linux的`/mydata/redis（需要创建）`中，并修改相应的配置
+> 准备redis配置文件。下载一个redis，解压后，将其中的`redis.conf`上传到linux的`/mydata/redis/（需要创建）`中，并修改相应的配置
 
 ![1](https://hp-documents.oss-cn-hangzhou.aliyuncs.com/2021/09/1.png)
 
@@ -414,6 +414,7 @@ docker pull nginx:1.10
 # 随便启动一个nginx实例，只是为了复制出配置，放到docker里作为镜像的统一配置
 docker run -p 80:80 --name nginx -d nginx:1.10
 
+mkdir /mydata/nginx	
 cd /mydata/nginx
 docker container cp nginx:/etc/nginx .
 然后在外部 /mydata/nginx/nginx 有了一堆文件
@@ -433,6 +434,25 @@ docker run -p 80:80 --name nginx \
 
 docker update nginx --restart=always
 
+```
+
+测试
+
+在`/mydata/nginx/html`中创建`index.html`
+
+```html
+<!DOCTYPE html>
+<html>
+<head>
+<title>Hello World</title>
+</head>
+<body>
+
+<h1>Hello World!</h1>
+<p>My first paragraph.</p>
+
+</body>
+</html>
 ```
 
 #### RabbitMQ
