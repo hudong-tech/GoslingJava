@@ -498,3 +498,114 @@ $ docker pull kibana:7.4.2
 ``` shell
 $ sh startup.sh -m standalone
 ```
+
+**nacos docker启动**：
+
+``` shell
+$ docker pull nacos/nacos-server
+# 单机启动
+$ docker run -d -p 8848:8848 --env MODE=standalone  --name nacos  nacos/nacos-server
+```
+
+映射挂载目录
+
+``` shell
+$ mkdir -p /mydata/nacos/conf
+$ mkdir -p /mydata/nacos/logs
+$ vi /mydata/nacos/conf/application.properties
+# 复制配置文件，并移除nacos容器
+$ docker exec -it nacos /bin/bash
+$ docker cp nacos:/home/nacos/conf/application.properties /mydata/nacos/conf
+$ docker stop nacos && docker rm nacos
+# 原始配置文件
+$ mv application.properties application.properties.backup
+```
+
+修改配置文件
+
+``` shell
+$ vi application.properties
+```
+
+``` shell
+server.contextPath=/nacos
+server.servlet.contextPath=/nacos
+server.port=8848
+
+spring.datasource.platform=mysql
+
+db.num=1
+db.url.0=jdbc:mysql://数据库地址:3306/nacos?characterEncoding=utf8&connectTimeout=1000&socketTimeout=3000&autoReconnect=true
+db.user=用户名
+db.password=密码
+
+
+nacos.cmdb.dumpTaskInterval=3600
+nacos.cmdb.eventTaskInterval=10
+nacos.cmdb.labelTaskInterval=300
+nacos.cmdb.loadDataAtStart=false
+
+management.metrics.export.elastic.enabled=false
+
+management.metrics.export.influx.enabled=false
+
+
+server.tomcat.accesslog.enabled=true
+server.tomcat.accesslog.pattern=%h %l %u %t "%r" %s %b %D %{User-Agent}i
+
+
+nacos.security.ignore.urls=/,/**/*.css,/**/*.js,/**/*.html,/**/*.map,/**/*.svg,/**/*.png,/**/*.ico,/console-fe/public/**,/v1/auth/login,/v1/console/health/**,/v1/cs/**,/v1/ns/**,/v1/cmdb/**,/actuator/**,/v1/console/server/**
+nacos.naming.distro.taskDispatchThreadCount=1
+nacos.naming.distro.taskDispatchPeriod=200
+nacos.naming.distro.batchSyncKeyCount=1000
+nacos.naming.distro.initDataRatio=0.9
+nacos.naming.distro.syncRetryDelay=5000
+nacos.naming.data.warmup=true
+nacos.naming.expireInstance=true
+```
+
+nacos容器启动
+
+``` shell
+docker run --name nacos -p 8848:8848 \
+    --privileged=true \
+    --restart=always \
+    -e JVM_XMS=256m \
+    -e JVM_XMX=256m \
+    -e MODE=standalone \
+    -e PREFER_HOST_MODE=hostname \
+    -v /mydata/nacos/logs:/home/nacos/logs \
+    -v /mydata/nacos/conf/application.properties:/home/nacos/conf/application.properties \
+    -d nacos/nacos-server
+```
+
+参数说明：
+
+``` shell
+-p 8848:8848           # 宿主机端口:容器端口
+--name nacos           # 容器名字
+--privileged=true      # 使用该参数，container内的root拥有真正的root权限, 否则，container内的root只是外部的一个普通用户权限
+--network host         # 设置属于该容器的网络
+--restart=always       # 总是重启，加上这句话之后，若重新启动Docker，该容器也会重新启动
+-e PREFER_HOST_MODE=hostname  # 是否支持 hostname，可选参数为hostname/ip，默认值是当前宿主机的ip
+-e MODE=standalone     # 使用 standalone模式（单机模式）,MODE值有cluster模式/standalone模式两种
+-e JVM_XMS=256m        # -Xms 为jvm启动时分配的内存，此处表⽰该进程只分配了256M内存
+-e JVM_XMX=256m        # -Xmx 为jvm运⾏过程中分配的最⼤内存，此处表⽰jvm进程最多只能够占⽤256M内存
+-d nacos/nacos-server  # 后台启动模式及使用的镜像  
+-v Users/z7/microservice/nacos/logs:/home/nacos/logs 
+-v Users/z7/microservice/nacos/conf/application.properties:/home/nacos/conf/application.properties 
+
+
+-v：挂载宿主机的一个目录, 持久化存储的关键所在，将主机目录挂载到容器对应目录，分别是：配置文件、日志文件
+--restart=always：容器自动启动参数，其值可以为[no,on-failure,always]
+                  no为默认值，表示容器退出时，docker不自动重启容器
+                  on-failure表示，若容器的退出状态非0，则docker自动重启容器,还可以指定重启次数，若超过指定次数未能启动容器则放弃
+                  always表示，只要容器退出，则docker将自动重启容器
+```
+
+访问
+
+``` shell
+http://主机名:8848/nacos
+```
+
